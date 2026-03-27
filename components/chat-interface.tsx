@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Send } from "lucide-react"
+import jsPDF from "jspdf"
 
 interface Message {
   id: string
@@ -10,7 +11,6 @@ interface Message {
 }
 
 export function ChatInterface() {
-  // 🔥 STEP 1: Questions (Your Template)
   const questions = [
     "What is the name of the screen?",
     "What is the purpose of this screen?",
@@ -27,8 +27,9 @@ export function ChatInterface() {
 
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<string[]>([])
+  const [showPreview, setShowPreview] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
 
-  // 🔥 STEP 2: Initial Messages
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -45,7 +46,6 @@ export function ChatInterface() {
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -55,8 +55,64 @@ export function ChatInterface() {
     scrollToBottom()
   }, [messages])
 
-  // 🔥 STEP 3: Replace Submit Logic
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ✅ JSON Generator
+  const generateJSON = () => ({
+    screenName: answers[0],
+    purpose: answers[1],
+    inputs: answers[2],
+    requiredFields: answers[3],
+    layout: answers[4],
+    actions: answers[5],
+    postAction: answers[6],
+    validations: answers[7],
+    specialCases: answers[8],
+    searchFilter: answers[9],
+    uiStyle: answers[10],
+  })
+
+  // ✅ PDF Generator
+  const downloadPDF = () => {
+    const doc = new jsPDF()
+
+    let y = 10
+    doc.setFontSize(14)
+    doc.text("Krishna AI - Screen Specification", 10, y)
+
+    y += 10
+    doc.setFontSize(10)
+
+    questions.forEach((q, index) => {
+      doc.text(`${q}`, 10, y)
+      y += 6
+      doc.text(`→ ${answers[index] || ""}`, 10, y)
+      y += 10
+    })
+
+    doc.save("krishna-screen.pdf")
+  }
+
+  // ✅ Restart / Regenerate
+  const restartFlow = () => {
+    setStep(0)
+    setAnswers([])
+    setShowPreview(false)
+    setIsEditing(false)
+    setMessages([
+      {
+        id: "1",
+        content: "Hi, I am Krishna. Let’s create your screen.",
+        role: "assistant"
+      },
+      {
+        id: "2",
+        content: questions[0],
+        role: "assistant"
+      }
+    ])
+  }
+
+  // ✅ Submit Logic
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim()) return
 
@@ -79,69 +135,120 @@ export function ChatInterface() {
       if (nextStep < questions.length) {
         aiContent = questions[nextStep]
       } else {
-        aiContent = "All details collected ✅ Generating preview..."
-
-        console.log("Final Answers:", newAnswers)
+        aiContent = "All details collected ✅ Showing preview..."
+        setShowPreview(true)
       }
 
       const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: Date.now().toString(),
         content: aiContent,
         role: "assistant",
       }
 
       setMessages((prev) => [...prev, aiMessage])
-      setIsTyping(false)
       setAnswers(newAnswers)
       setStep(nextStep)
-    }, 800)
+      setIsTyping(false)
+    }, 600)
   }
 
   return (
     <div className="flex h-dvh flex-col bg-background">
       {/* Header */}
-      <header className="flex items-center justify-center border-b border-border/50 bg-card/80 px-4 py-4 backdrop-blur-xl">
-        <h1 className="text-lg font-semibold tracking-tight text-foreground">
-          Krishna AI
-        </h1>
+      <header className="flex items-center justify-center border-b px-4 py-4">
+        <h1 className="text-lg font-semibold">Krishna AI</h1>
       </header>
 
-      {/* Messages Area */}
+      {/* Chat */}
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-2xl space-y-4">
-          {messages.map((message) => (
-            <ChatBubble key={message.id} message={message} />
+          {messages.map((m) => (
+            <ChatBubble key={m.id} message={m} />
           ))}
           {isTyping && <TypingIndicator />}
+
+          {/* ✅ Preview Section */}
+          {showPreview && (
+            <div className="mt-6 rounded-xl border p-4 bg-white">
+              <h2 className="font-semibold mb-3">Preview</h2>
+
+              {questions.map((q, i) => (
+                <div key={i} className="mb-2">
+                  <p className="text-sm font-medium">{q}</p>
+
+                  {isEditing ? (
+                    <input
+                      value={answers[i]}
+                      onChange={(e) => {
+                        const updated = [...answers]
+                        updated[i] = e.target.value
+                        setAnswers(updated)
+                      }}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-600">{answers[i]}</p>
+                  )}
+                </div>
+              ))}
+
+              {/* JSON */}
+              <div className="mt-4">
+                <p className="text-xs mb-1">AI JSON:</p>
+                <pre className="text-xs bg-gray-100 p-2 rounded">
+                  {JSON.stringify(generateJSON(), null, 2)}
+                </pre>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2 mt-4 flex-wrap">
+                <button
+                  onClick={downloadPDF}
+                  className="px-3 py-2 bg-blue-500 text-white rounded"
+                >
+                  Download PDF
+                </button>
+
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="px-3 py-2 bg-gray-500 text-white rounded"
+                >
+                  {isEditing ? "Save" : "Edit"}
+                </button>
+
+                <button
+                  onClick={restartFlow}
+                  className="px-3 py-2 bg-red-500 text-white rounded"
+                >
+                  Regenerate
+                </button>
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
       </main>
 
-      {/* Input Area */}
-      <footer className="border-t border-border/50 bg-card/80 px-4 py-4 backdrop-blur-xl">
-        <form
-          onSubmit={handleSubmit}
-          className="mx-auto flex max-w-2xl items-center gap-3"
-        >
-          <div className="relative flex-1">
+      {/* Input */}
+      {!showPreview && (
+        <footer className="border-t px-4 py-4">
+          <form
+            onSubmit={handleSubmit}
+            className="mx-auto flex max-w-2xl gap-2"
+          >
             <input
-              ref={inputRef}
-              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Message Krishna..."
-              className="w-full rounded-full border border-border bg-input px-5 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              className="flex-1 border rounded px-4 py-2"
+              placeholder="Type your answer..."
             />
-          </div>
-          <button
-            type="submit"
-            disabled={!input.trim()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-          >
-            <Send className="h-5 w-5" />
-          </button>
-        </form>
-      </footer>
+            <button className="bg-blue-500 text-white px-4 rounded">
+              <Send size={16} />
+            </button>
+          </form>
+        </footer>
+      )}
     </div>
   )
 }
@@ -152,10 +259,8 @@ function ChatBubble({ message }: { message: Message }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
-          isUser
-            ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md bg-secondary text-secondary-foreground"
+        className={`px-4 py-2 rounded-lg max-w-[80%] ${
+          isUser ? "bg-blue-500 text-white" : "bg-gray-200"
         }`}
       >
         {message.content}
@@ -166,14 +271,6 @@ function ChatBubble({ message }: { message: Message }) {
 
 function TypingIndicator() {
   return (
-    <div className="flex justify-start">
-      <div className="rounded-2xl rounded-bl-md bg-secondary px-4 py-3">
-        <div className="flex items-center gap-1">
-          <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.3s]" />
-          <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.15s]" />
-          <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/60" />
-        </div>
-      </div>
-    </div>
+    <div className="text-sm text-gray-400">Krishna is typing...</div>
   )
 }
