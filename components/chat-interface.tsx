@@ -55,7 +55,7 @@ export function ChatInterface() {
     scrollToBottom()
   }, [messages])
 
-  // ✅ JSON Generator (SAFE)
+  // ✅ JSON Generator
   const generateJSON = (data: string[]) => ({
     screenName: data[0],
     purpose: data[1],
@@ -91,7 +91,7 @@ export function ChatInterface() {
     doc.save("krishna-screen.pdf")
   }
 
-  // ✅ Restart
+  // ✅ Restart Flow
   const restartFlow = () => {
     setStep(0)
     setAnswers([])
@@ -111,50 +111,50 @@ export function ChatInterface() {
     ])
   }
 
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault()
-  if (!input.trim()) return
+  // ✅ FINAL FIXED SUBMIT LOGIC
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim()) return
 
-  const userMessage = {
-    id: Date.now().toString(),
-    content: input.trim(),
-    role: "user" as const,
-  }
-
-  const newAnswers = [...answers, input.trim()]
-  const nextStep = step + 1
-
-  // ✅ FIX: update state immediately
-  setMessages((prev) => [...prev, userMessage])
-  setAnswers(newAnswers)
-  setStep(nextStep)
-  setInput("")
-  setIsTyping(true)
-
-  setTimeout(() => {
-    let aiMessage
-
-    if (nextStep < questions.length) {
-      aiMessage = {
-        id: Date.now().toString(),
-        content: questions[nextStep],
-        role: "assistant" as const,
-      }
-    } else {
-      aiMessage = {
-        id: Date.now().toString(),
-        content: "All details collected ✅ Showing preview...",
-        role: "assistant" as const,
-      }
-
-      // ✅ IMPORTANT: trigger preview here
-      setShowPreview(true)
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: input.trim(),
+      role: "user",
     }
 
-    setMessages((prev) => [...prev, aiMessage])
-    setIsTyping(false)
-  }, 500)
-}
+    const newAnswers = [...answers, input.trim()]
+    const nextStep = step + 1
+
+    // 🔥 update immediately
+    setMessages((prev) => [...prev, userMessage])
+    setAnswers(newAnswers)
+    setStep(nextStep)
+    setInput("")
+    setIsTyping(true)
+
+    setTimeout(() => {
+      let aiMessage: Message
+
+      if (nextStep < questions.length) {
+        aiMessage = {
+          id: Date.now().toString(),
+          content: questions[nextStep],
+          role: "assistant",
+        }
+      } else {
+        aiMessage = {
+          id: Date.now().toString(),
+          content: "All details collected ✅ Showing preview...",
+          role: "assistant",
+        }
+
+        setShowPreview(true)
+      }
+
+      setMessages((prev) => [...prev, aiMessage])
+      setIsTyping(false)
+    }, 500)
+  }
 
   return (
     <div className="flex h-dvh flex-col bg-background">
@@ -167,9 +167,10 @@ const handleSubmit = (e: React.FormEvent) => {
           {messages.map((m) => (
             <ChatBubble key={m.id} message={m} />
           ))}
+
           {isTyping && <TypingIndicator />}
 
-          {/* ✅ Preview */}
+          {/* ✅ PREVIEW */}
           {showPreview && (
             <div className="mt-6 rounded-xl border p-4 bg-white">
               <h2 className="font-semibold mb-3">Preview</h2>
@@ -195,21 +196,30 @@ const handleSubmit = (e: React.FormEvent) => {
               ))}
 
               {/* JSON */}
-              <pre className="text-xs bg-gray-100 p-2 rounded mt-3">
+              <pre className="text-xs bg-gray-100 p-2 rounded mt-3 overflow-x-auto">
                 {JSON.stringify(generateJSON(answers), null, 2)}
               </pre>
 
               {/* Buttons */}
               <div className="flex gap-2 mt-4 flex-wrap">
-                <button onClick={downloadPDF} className="px-3 py-2 bg-blue-500 text-white rounded">
+                <button
+                  onClick={downloadPDF}
+                  className="px-3 py-2 bg-blue-500 text-white rounded"
+                >
                   Download PDF
                 </button>
 
-                <button onClick={() => setIsEditing(!isEditing)} className="px-3 py-2 bg-gray-500 text-white rounded">
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="px-3 py-2 bg-gray-500 text-white rounded"
+                >
                   {isEditing ? "Save" : "Edit"}
                 </button>
 
-                <button onClick={restartFlow} className="px-3 py-2 bg-red-500 text-white rounded">
+                <button
+                  onClick={restartFlow}
+                  className="px-3 py-2 bg-red-500 text-white rounded"
+                >
                   Regenerate
                 </button>
               </div>
@@ -222,7 +232,10 @@ const handleSubmit = (e: React.FormEvent) => {
 
       {!showPreview && (
         <footer className="border-t px-4 py-4">
-          <form onSubmit={handleSubmit} className="mx-auto flex max-w-2xl gap-2">
+          <form
+            onSubmit={handleSubmit}
+            className="mx-auto flex max-w-2xl gap-2"
+          >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -244,7 +257,11 @@ function ChatBubble({ message }: { message: Message }) {
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div className={`px-4 py-2 rounded-lg max-w-[80%] ${isUser ? "bg-blue-500 text-white" : "bg-gray-200"}`}>
+      <div
+        className={`px-4 py-2 rounded-lg max-w-[80%] ${
+          isUser ? "bg-blue-500 text-white" : "bg-gray-200"
+        }`}
+      >
         {message.content}
       </div>
     </div>
@@ -252,5 +269,9 @@ function ChatBubble({ message }: { message: Message }) {
 }
 
 function TypingIndicator() {
-  return <div className="text-sm text-gray-400">Krishna is typing...</div>
+  return (
+    <div className="text-sm text-gray-400">
+      Krishna is typing...
+    </div>
+  )
 }
