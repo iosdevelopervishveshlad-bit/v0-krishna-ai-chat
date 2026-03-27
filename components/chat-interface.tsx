@@ -111,47 +111,50 @@ export function ChatInterface() {
     ])
   }
 
-  // ✅ FIXED Submit Logic (IMPORTANT)
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim()) return
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault()
+  if (!input.trim()) return
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input.trim(),
-      role: "user",
+  const userMessage = {
+    id: Date.now().toString(),
+    content: input.trim(),
+    role: "user" as const,
+  }
+
+  const newAnswers = [...answers, input.trim()]
+  const nextStep = step + 1
+
+  // ✅ FIX: update state immediately
+  setMessages((prev) => [...prev, userMessage])
+  setAnswers(newAnswers)
+  setStep(nextStep)
+  setInput("")
+  setIsTyping(true)
+
+  setTimeout(() => {
+    let aiMessage
+
+    if (nextStep < questions.length) {
+      aiMessage = {
+        id: Date.now().toString(),
+        content: questions[nextStep],
+        role: "assistant" as const,
+      }
+    } else {
+      aiMessage = {
+        id: Date.now().toString(),
+        content: "All details collected ✅ Showing preview...",
+        role: "assistant" as const,
+      }
+
+      // ✅ IMPORTANT: trigger preview here
+      setShowPreview(true)
     }
 
-    const newAnswers = [...answers, input.trim()]
-    const nextStep = step + 1
-
-    // ✅ Update immediately (fix)
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setAnswers(newAnswers)
-    setStep(nextStep)
-    setIsTyping(true)
-
-    setTimeout(() => {
-      let aiContent = ""
-
-      if (nextStep < questions.length) {
-        aiContent = questions[nextStep]
-      } else {
-        aiContent = "All details collected ✅ Showing preview..."
-        setShowPreview(true)
-      }
-
-      const aiMessage: Message = {
-        id: Date.now().toString(),
-        content: aiContent,
-        role: "assistant",
-      }
-
-      setMessages((prev) => [...prev, aiMessage])
-      setIsTyping(false)
-    }, 600)
-  }
+    setMessages((prev) => [...prev, aiMessage])
+    setIsTyping(false)
+  }, 500)
+}
 
   return (
     <div className="flex h-dvh flex-col bg-background">
