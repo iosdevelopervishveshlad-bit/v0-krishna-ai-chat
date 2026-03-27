@@ -47,15 +47,11 @@ export function ChatInterface() {
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
   useEffect(() => {
-    scrollToBottom()
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // ✅ JSON Generator
+  // ✅ JSON
   const generateJSON = (data: string[]) => ({
     screenName: data[0],
     purpose: data[1],
@@ -70,16 +66,50 @@ export function ChatInterface() {
     uiStyle: data[10],
   })
 
-  // ✅ PDF Generator
+  // ✅ AI Prompt
+  const generateAIPrompt = () => {
+    const data = generateJSON(answers)
+
+    return `
+Create a SwiftUI screen using MVVM architecture.
+
+Screen Name: ${data.screenName}
+
+Purpose:
+${data.purpose}
+
+Requirements:
+- Inputs: ${data.inputs}
+- Required Fields: ${data.requiredFields}
+- Layout: ${data.layout}
+- Actions: ${data.actions}
+
+Validations:
+${data.validations}
+
+Special Cases:
+${data.specialCases}
+
+Search/Filter:
+${data.searchFilter}
+
+UI Style:
+${data.uiStyle}
+
+Rules:
+- Use clean architecture (MVVM)
+- Keep UI minimal (Apple style)
+- Add validation
+`
+  }
+
+  // ✅ PDF
   const downloadPDF = () => {
     const doc = new jsPDF()
     let y = 10
 
-    doc.setFontSize(14)
     doc.text("Krishna AI - Screen Specification", 10, y)
-
     y += 10
-    doc.setFontSize(10)
 
     questions.forEach((q, i) => {
       doc.text(q, 10, y)
@@ -91,224 +121,161 @@ export function ChatInterface() {
     doc.save("krishna-screen.pdf")
   }
 
-  // ✅ Restart Flow
+  // ✅ Restart
   const restartFlow = () => {
     setStep(0)
     setAnswers([])
     setShowPreview(false)
     setIsEditing(false)
     setMessages([
-      {
-        id: "1",
-        content: "Hi, I am Krishna. Let’s create your screen.",
-        role: "assistant"
-      },
-      {
-        id: "2",
-        content: questions[0],
-        role: "assistant"
-      }
+      { id: "1", content: "Hi, I am Krishna. Let’s create your screen.", role: "assistant" },
+      { id: "2", content: questions[0], role: "assistant" }
     ])
   }
 
-  // ✅ FINAL FIXED SUBMIT LOGIC
+  // ✅ FIXED SUBMIT
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim()) return
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input.trim(),
-      role: "user",
-    }
-
     const newAnswers = [...answers, input.trim()]
     const nextStep = step + 1
 
-    // 🔥 update immediately
-    setMessages((prev) => [...prev, userMessage])
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now().toString(), content: input, role: "user" }
+    ])
+
     setAnswers(newAnswers)
     setStep(nextStep)
     setInput("")
     setIsTyping(true)
 
     setTimeout(() => {
-      let aiMessage: Message
+      let reply = ""
 
       if (nextStep < questions.length) {
-        aiMessage = {
-          id: Date.now().toString(),
-          content: questions[nextStep],
-          role: "assistant",
-        }
+        reply = questions[nextStep]
       } else {
-        aiMessage = {
-          id: Date.now().toString(),
-          content: "All details collected ✅ Showing preview...",
-          role: "assistant",
-        }
-
+        reply = "All details collected ✅ Showing preview..."
         setShowPreview(true)
       }
 
-      setMessages((prev) => [...prev, aiMessage])
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now().toString(), content: reply, role: "assistant" }
+      ])
+
       setIsTyping(false)
-    }, 500)
+    }, 400)
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
-      <header className="flex items-center justify-center border-b px-4 py-4">
-        <h1 className="text-lg font-semibold">Krishna AI</h1>
+    <div className="flex h-dvh flex-col">
+      <header className="text-center py-4 border-b font-semibold">
+        Krishna AI
       </header>
 
-      <main className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="mx-auto max-w-2xl space-y-4">
-          {messages.map((m) => (
-            <ChatBubble key={m.id} message={m} />
-          ))}
+      <main className="flex-1 overflow-y-auto p-4 space-y-4 max-w-2xl mx-auto">
+        {messages.map((m) => (
+          <div key={m.id} className={m.role === "user" ? "text-right" : "text-left"}>
+            <span className={m.role === "user" ? "bg-blue-500 text-white px-3 py-2 rounded" : "bg-gray-200 px-3 py-2 rounded"}>
+              {m.content}
+            </span>
+          </div>
+        ))}
 
-          {isTyping && <TypingIndicator />}
+        {isTyping && <p className="text-sm text-gray-400">Krishna typing...</p>}
 
-          {/* ✅ PREVIEW */}
-          {showPreview && (
-            <div className="mt-6 rounded-xl border p-4 bg-white">
-              <h2 className="font-semibold mb-3">Preview</h2>
+        {/* ✅ PREVIEW */}
+        {showPreview && (
+          <div className="border p-4 rounded bg-white mt-4">
+            <h2 className="font-semibold mb-3">Preview</h2>
 
-              {questions.map((q, i) => (
-                <div key={i} className="mb-2">
-                  <p className="text-sm font-medium">{q}</p>
+            {questions.map((q, i) => (
+              <div key={i}>
+                <p className="text-sm font-medium">{q}</p>
+                {isEditing ? (
+                  <input
+                    value={answers[i]}
+                    onChange={(e) => {
+                      const updated = [...answers]
+                      updated[i] = e.target.value
+                      setAnswers(updated)
+                    }}
+                    className="border w-full p-1 text-sm"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-600">{answers[i]}</p>
+                )}
+              </div>
+            ))}
 
-                  {isEditing ? (
-                    <input
-                      value={answers[i]}
-                      onChange={(e) => {
-                        const updated = [...answers]
-                        updated[i] = e.target.value
-                        setAnswers(updated)
-                      }}
-                      className="w-full border rounded px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-600">{answers[i]}</p>
-                  )}
-                </div>
-              ))}
-
-              {/* JSON */}
-<div className="mt-4">
-  <div className="flex justify-between items-center">
-    <p className="text-xs font-semibold">Raw JSON</p>
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(
-          JSON.stringify(generateJSON(answers), null, 2)
-        )
-        alert("JSON copied!")
-      }}
-      className="text-xs px-2 py-1 bg-blue-500 text-white rounded"
-    >
-      Copy JSON
-    </button>
-  </div>
-
-  <pre className="text-xs bg-gray-100 p-3 rounded mt-1 overflow-x-auto">
-    {JSON.stringify(generateJSON(answers), null, 2)}
-  </pre>
-</div>
-
-{/* AI PROMPT */}
-<div className="mt-4">
-  <div className="flex justify-between items-center">
-    <p className="text-xs font-semibold">AI Prompt</p>
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(generateAIPrompt())
-        alert("Prompt copied!")
-      }}
-      className="text-xs px-2 py-1 bg-green-600 text-white rounded"
-    >
-      Copy Prompt
-    </button>
-  </div>
-
-  <pre className="text-xs bg-black text-green-400 p-3 rounded mt-1 overflow-x-auto whitespace-pre-wrap">
-    {generateAIPrompt()}
-  </pre>
-</div>
-
-              {/* Buttons */}
-              <div className="flex gap-2 mt-4 flex-wrap">
+            {/* JSON */}
+            <div className="mt-4">
+              <div className="flex justify-between">
+                <p className="text-xs font-semibold">Raw JSON</p>
                 <button
-                  onClick={downloadPDF}
-                  className="px-3 py-2 bg-blue-500 text-white rounded"
+                  onClick={() => navigator.clipboard.writeText(JSON.stringify(generateJSON(answers), null, 2))}
+                  className="text-xs bg-blue-500 text-white px-2 rounded"
                 >
-                  Download PDF
-                </button>
-
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="px-3 py-2 bg-gray-500 text-white rounded"
-                >
-                  {isEditing ? "Save" : "Edit"}
-                </button>
-
-                <button
-                  onClick={restartFlow}
-                  className="px-3 py-2 bg-red-500 text-white rounded"
-                >
-                  Regenerate
+                  Copy
                 </button>
               </div>
-            </div>
-          )}
 
-          <div ref={messagesEndRef} />
-        </div>
+              <pre className="bg-gray-100 p-2 text-xs overflow-x-auto">
+                {JSON.stringify(generateJSON(answers), null, 2)}
+              </pre>
+            </div>
+
+            {/* AI Prompt */}
+            <div className="mt-4">
+              <div className="flex justify-between">
+                <p className="text-xs font-semibold">AI Prompt</p>
+                <button
+                  onClick={() => navigator.clipboard.writeText(generateAIPrompt())}
+                  className="text-xs bg-green-600 text-white px-2 rounded"
+                >
+                  Copy
+                </button>
+              </div>
+
+              <pre className="bg-black text-green-400 p-2 text-xs whitespace-pre-wrap">
+                {generateAIPrompt()}
+              </pre>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-2 mt-4">
+              <button onClick={downloadPDF} className="bg-blue-500 text-white px-3 py-2 rounded">
+                Download PDF
+              </button>
+              <button onClick={() => setIsEditing(!isEditing)} className="bg-gray-500 text-white px-3 py-2 rounded">
+                Edit
+              </button>
+              <button onClick={restartFlow} className="bg-red-500 text-white px-3 py-2 rounded">
+                Restart
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
       </main>
 
       {!showPreview && (
-        <footer className="border-t px-4 py-4">
-          <form
-            onSubmit={handleSubmit}
-            className="mx-auto flex max-w-2xl gap-2"
-          >
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="flex-1 border rounded px-4 py-2"
-              placeholder="Type your answer..."
-            />
-            <button className="bg-blue-500 text-white px-4 rounded">
-              <Send size={16} />
-            </button>
-          </form>
-        </footer>
+        <form onSubmit={handleSubmit} className="flex p-4 gap-2 border-t">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="flex-1 border px-3 py-2"
+            placeholder="Type answer..."
+          />
+          <button className="bg-blue-500 text-white px-4">
+            <Send size={16} />
+          </button>
+        </form>
       )}
-    </div>
-  )
-}
-
-function ChatBubble({ message }: { message: Message }) {
-  const isUser = message.role === "user"
-
-  return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`px-4 py-2 rounded-lg max-w-[80%] ${
-          isUser ? "bg-blue-500 text-white" : "bg-gray-200"
-        }`}
-      >
-        {message.content}
-      </div>
-    </div>
-  )
-}
-
-function TypingIndicator() {
-  return (
-    <div className="text-sm text-gray-400">
-      Krishna is typing...
     </div>
   )
 }
