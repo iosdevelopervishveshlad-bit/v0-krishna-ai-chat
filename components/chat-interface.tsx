@@ -55,43 +55,43 @@ export function ChatInterface() {
     scrollToBottom()
   }, [messages])
 
-  // ✅ JSON Generator
-  const generateJSON = () => ({
-    screenName: answers[0],
-    purpose: answers[1],
-    inputs: answers[2],
-    requiredFields: answers[3],
-    layout: answers[4],
-    actions: answers[5],
-    postAction: answers[6],
-    validations: answers[7],
-    specialCases: answers[8],
-    searchFilter: answers[9],
-    uiStyle: answers[10],
+  // ✅ JSON Generator (SAFE)
+  const generateJSON = (data: string[]) => ({
+    screenName: data[0],
+    purpose: data[1],
+    inputs: data[2],
+    requiredFields: data[3],
+    layout: data[4],
+    actions: data[5],
+    postAction: data[6],
+    validations: data[7],
+    specialCases: data[8],
+    searchFilter: data[9],
+    uiStyle: data[10],
   })
 
   // ✅ PDF Generator
   const downloadPDF = () => {
     const doc = new jsPDF()
-
     let y = 10
+
     doc.setFontSize(14)
     doc.text("Krishna AI - Screen Specification", 10, y)
 
     y += 10
     doc.setFontSize(10)
 
-    questions.forEach((q, index) => {
-      doc.text(`${q}`, 10, y)
+    questions.forEach((q, i) => {
+      doc.text(q, 10, y)
       y += 6
-      doc.text(`→ ${answers[index] || ""}`, 10, y)
+      doc.text(`→ ${answers[i] || ""}`, 10, y)
       y += 10
     })
 
     doc.save("krishna-screen.pdf")
   }
 
-  // ✅ Restart / Regenerate
+  // ✅ Restart
   const restartFlow = () => {
     setStep(0)
     setAnswers([])
@@ -111,7 +111,7 @@ export function ChatInterface() {
     ])
   }
 
-  // ✅ Submit Logic
+  // ✅ FIXED Submit Logic (IMPORTANT)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim()) return
@@ -125,8 +125,11 @@ export function ChatInterface() {
     const newAnswers = [...answers, input.trim()]
     const nextStep = step + 1
 
+    // ✅ Update immediately (fix)
     setMessages((prev) => [...prev, userMessage])
     setInput("")
+    setAnswers(newAnswers)
+    setStep(nextStep)
     setIsTyping(true)
 
     setTimeout(() => {
@@ -146,20 +149,16 @@ export function ChatInterface() {
       }
 
       setMessages((prev) => [...prev, aiMessage])
-      setAnswers(newAnswers)
-      setStep(nextStep)
       setIsTyping(false)
     }, 600)
   }
 
   return (
     <div className="flex h-dvh flex-col bg-background">
-      {/* Header */}
       <header className="flex items-center justify-center border-b px-4 py-4">
         <h1 className="text-lg font-semibold">Krishna AI</h1>
       </header>
 
-      {/* Chat */}
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-2xl space-y-4">
           {messages.map((m) => (
@@ -167,7 +166,7 @@ export function ChatInterface() {
           ))}
           {isTyping && <TypingIndicator />}
 
-          {/* ✅ Preview Section */}
+          {/* ✅ Preview */}
           {showPreview && (
             <div className="mt-6 rounded-xl border p-4 bg-white">
               <h2 className="font-semibold mb-3">Preview</h2>
@@ -193,33 +192,21 @@ export function ChatInterface() {
               ))}
 
               {/* JSON */}
-              <div className="mt-4">
-                <p className="text-xs mb-1">AI JSON:</p>
-                <pre className="text-xs bg-gray-100 p-2 rounded">
-                  {JSON.stringify(generateJSON(), null, 2)}
-                </pre>
-              </div>
+              <pre className="text-xs bg-gray-100 p-2 rounded mt-3">
+                {JSON.stringify(generateJSON(answers), null, 2)}
+              </pre>
 
               {/* Buttons */}
               <div className="flex gap-2 mt-4 flex-wrap">
-                <button
-                  onClick={downloadPDF}
-                  className="px-3 py-2 bg-blue-500 text-white rounded"
-                >
+                <button onClick={downloadPDF} className="px-3 py-2 bg-blue-500 text-white rounded">
                   Download PDF
                 </button>
 
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="px-3 py-2 bg-gray-500 text-white rounded"
-                >
+                <button onClick={() => setIsEditing(!isEditing)} className="px-3 py-2 bg-gray-500 text-white rounded">
                   {isEditing ? "Save" : "Edit"}
                 </button>
 
-                <button
-                  onClick={restartFlow}
-                  className="px-3 py-2 bg-red-500 text-white rounded"
-                >
+                <button onClick={restartFlow} className="px-3 py-2 bg-red-500 text-white rounded">
                   Regenerate
                 </button>
               </div>
@@ -230,13 +217,9 @@ export function ChatInterface() {
         </div>
       </main>
 
-      {/* Input */}
       {!showPreview && (
         <footer className="border-t px-4 py-4">
-          <form
-            onSubmit={handleSubmit}
-            className="mx-auto flex max-w-2xl gap-2"
-          >
+          <form onSubmit={handleSubmit} className="mx-auto flex max-w-2xl gap-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -258,11 +241,7 @@ function ChatBubble({ message }: { message: Message }) {
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`px-4 py-2 rounded-lg max-w-[80%] ${
-          isUser ? "bg-blue-500 text-white" : "bg-gray-200"
-        }`}
-      >
+      <div className={`px-4 py-2 rounded-lg max-w-[80%] ${isUser ? "bg-blue-500 text-white" : "bg-gray-200"}`}>
         {message.content}
       </div>
     </div>
@@ -270,7 +249,5 @@ function ChatBubble({ message }: { message: Message }) {
 }
 
 function TypingIndicator() {
-  return (
-    <div className="text-sm text-gray-400">Krishna is typing...</div>
-  )
+  return <div className="text-sm text-gray-400">Krishna is typing...</div>
 }
