@@ -196,9 +196,46 @@ export function ChatInterface() {
               ))}
 
               {/* JSON */}
-              <pre className="text-xs bg-gray-100 p-2 rounded mt-3 overflow-x-auto">
-                {JSON.stringify(generateJSON(answers), null, 2)}
-              </pre>
+<div className="mt-4">
+  <div className="flex justify-between items-center">
+    <p className="text-xs font-semibold">Raw JSON</p>
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(
+          JSON.stringify(generateJSON(answers), null, 2)
+        )
+        alert("JSON copied!")
+      }}
+      className="text-xs px-2 py-1 bg-blue-500 text-white rounded"
+    >
+      Copy JSON
+    </button>
+  </div>
+
+  <pre className="text-xs bg-gray-100 p-3 rounded mt-1 overflow-x-auto">
+    {JSON.stringify(generateJSON(answers), null, 2)}
+  </pre>
+</div>
+
+{/* AI PROMPT */}
+<div className="mt-4">
+  <div className="flex justify-between items-center">
+    <p className="text-xs font-semibold">AI Prompt</p>
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(generateAIPrompt())
+        alert("Prompt copied!")
+      }}
+      className="text-xs px-2 py-1 bg-green-600 text-white rounded"
+    >
+      Copy Prompt
+    </button>
+  </div>
+
+  <pre className="text-xs bg-black text-green-400 p-3 rounded mt-1 overflow-x-auto whitespace-pre-wrap">
+    {generateAIPrompt()}
+  </pre>
+</div>
 
               {/* Buttons */}
               <div className="flex gap-2 mt-4 flex-wrap">
